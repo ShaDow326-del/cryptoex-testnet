@@ -1,0 +1,76 @@
+import { Line } from "react-chartjs-2";
+import { useEffect, useRef, useState } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+export default function CoinChart({ coin, price }) {
+  const [dataPoints, setDataPoints] = useState([price]);
+  const [labels, setLabels] = useState([new Date().toLocaleTimeString()]);
+
+  const intervalRef = useRef();
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setDataPoints((prev) => {
+        const last = prev[prev.length - 1] || price;
+        // simulate volatility
+        const change = (Math.random() - 0.5) * (last * 0.02); // ±2%
+        const nextPrice = +(last + change).toFixed(2);
+        return [...prev.slice(-29), nextPrice]; // keep last 30 points
+      });
+
+      setLabels((prev) => {
+        const now = new Date().toLocaleTimeString();
+        return [...prev.slice(-29), now];
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalRef.current);
+  }, [price]);
+
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: `${coin} Price`,
+        data: dataPoints,
+        fill: false,
+        borderColor: "#f0b90b",
+        backgroundColor: "#f0b90b",
+        tension: 0.3
+      }
+    ]
+  };
+
+  const options = {
+    responsive: true,
+    animation: { duration: 500 },
+    plugins: {
+      legend: { display: true },
+      tooltip: { mode: "index" }
+    },
+    scales: {
+      y: { beginAtZero: false }
+    }
+  };
+
+  return <Line data={data} options={options} />;
+}
