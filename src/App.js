@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 const coins = [
@@ -64,4 +63,4 @@ export default function App() {
       )}
     </div>
   );
-    }
+  }
