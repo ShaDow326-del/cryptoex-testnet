@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const coinList = [
   "BTC","ETH","BNB","TON","USDT","ADA","AVAX","KASPA","SUI","CORE",
@@ -7,30 +7,34 @@ const coinList = [
 ];
 
 export default function App() {
-  const [active, setActive] = useState("Dashboard");
+  const [active, setActive] = useState("Spot");
   const [orders, setOrders] = useState([]);
   const [balance, setBalance] = useState(10000);
   const [prices, setPrices] = useState({});
+  const prevPrices = useRef({});
 
-  // init prices
+  // initialize prices ONCE
   useEffect(() => {
-    const base = {};
+    const initial = {};
     coinList.forEach(c => {
-      base[c] = +(Math.random() * 50000 + 1).toFixed(2);
+      initial[c] = +(Math.random() * 50000 + 100).toFixed(2);
     });
-    setPrices(base);
+    setPrices(initial);
+    prevPrices.current = initial;
   }, []);
 
-  // volatility
+  // simulate volatility
   useEffect(() => {
     const interval = setInterval(() => {
       setPrices(p => {
-        const copy = { ...p };
-        Object.keys(copy).forEach(c => {
-          const change = (Math.random() - 0.5) * 2; // volatile
-          copy[c] = +(copy[c] + change).toFixed(2);
+        const updated = { ...p };
+        Object.keys(updated).forEach(c => {
+          const volatility = c === "USDT" ? 0.01 : Math.random() * 50;
+          const change = (Math.random() - 0.5) * volatility;
+          updated[c] = +(updated[c] + change).toFixed(2);
         });
-        return copy;
+        prevPrices.current = p;
+        return updated;
       });
     }, 1000);
 
@@ -40,10 +44,17 @@ export default function App() {
   function placeOrder(coin, type) {
     const amount = 100;
     setBalance(b => b - amount);
-    setOrders(o => [
-      ...o,
-      `${type} ${coin} @ $${prices[coin]}`
-    ]);
+    setOrders(o => [...o, `${type} ${coin} @ $${prices[coin]}`]);
+  }
+
+  function priceColor(coin) {
+    if (!prevPrices.current[coin]) return "#eaecef";
+    return prices[coin] > prevPrices.current[coin] ? "#0ecb81" : "#f6465d";
+  }
+
+  function arrow(coin) {
+    if (!prevPrices.current[coin]) return "";
+    return prices[coin] > prevPrices.current[coin] ? " ↑" : " ↓";
   }
 
   return (
@@ -51,42 +62,26 @@ export default function App() {
       <h1>CryptoEx Testnet</h1>
       <p>Balance: ${balance.toFixed(2)}</p>
 
-      <nav style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {["Dashboard","Spot","Futures","Orders"].map(n => (
+      <nav style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {["Spot","Futures","Orders"].map(n => (
           <button key={n} onClick={() => setActive(n)}>{n}</button>
         ))}
       </nav>
 
-      {active === "Dashboard" && (
+      {(active === "Spot" || active === "Futures") && (
         <div>
-          <h2>Market Overview</h2>
-          {coinList.slice(0,10).map(c => (
-            <p key={c}>{c}: ${prices[c]}</p>
-          ))}
-        </div>
-      )}
-
-      {active === "Spot" && (
-        <div>
-          <h2>Spot Trading</h2>
           {coinList.map(c => (
-            <div key={c}>
-              {c} — ${prices[c]}
-              <button onClick={() => placeOrder(c,"BUY")}>Buy</button>
-              <button onClick={() => placeOrder(c,"SELL")}>Sell</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {active === "Futures" && (
-        <div>
-          <h2>Futures Trading</h2>
-          {coinList.map(c => (
-            <div key={c}>
-              {c} — ${prices[c]}
-              <button onClick={() => placeOrder(c,"LONG")}>Long</button>
-              <button onClick={() => placeOrder(c,"SHORT")}>Short</button>
+            <div key={c} style={{ marginBottom: 6 }}>
+              <strong>{c}</strong>{" "}
+              <span style={{ color: priceColor(c) }}>
+                ${prices[c]}{arrow(c)}
+              </span>
+              <button onClick={() => placeOrder(c, active === "Spot" ? "BUY" : "LONG")}>
+                {active === "Spot" ? "Buy" : "Long"}
+              </button>
+              <button onClick={() => placeOrder(c, active === "Spot" ? "SELL" : "SHORT")}>
+                {active === "Spot" ? "Sell" : "Short"}
+              </button>
             </div>
           ))}
         </div>
@@ -94,9 +89,9 @@ export default function App() {
 
       {active === "Orders" && (
         <ul>
-          {orders.map((o,i) => <li key={i}>{o}</li>)}
+          {orders.map((o, i) => <li key={i}>{o}</li>)}
         </ul>
       )}
     </div>
   );
-                  }
+            }
