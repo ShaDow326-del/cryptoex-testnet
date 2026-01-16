@@ -2,5 +2,10 @@ body {
   margin: 0;
   background: #0b0e11;
   color: #eaecef;
-  font-family: Arial, sans-serif;
+}
+
+button {
+  margin: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
 }
